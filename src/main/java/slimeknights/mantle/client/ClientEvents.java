@@ -71,8 +71,71 @@ import slimeknights.mantle.util.RegistryHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.minecraft.world.item.BucketItem;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 
 public class ClientEvents {
+  private static final java.util.concurrent.ConcurrentHashMap<net.minecraft.resources.ResourceLocation, Integer> COLOR_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+  private static int getFluidColor(net.minecraft.world.level.material.Fluid fluid) {
+      net.minecraft.resources.ResourceLocation still = IClientFluidTypeExtensions.of(fluid).getStillTexture();
+      if (still == null) return -1;
+      return COLOR_CACHE.computeIfAbsent(still, s -> {
+          net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = net.minecraft.client.Minecraft.getInstance().getModelManager().getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).getSprite(s);
+          if (sprite == null || sprite.contents().name() == net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation()) return -1;
+          float r = 0, g = 0, b = 0;
+          float count = 0;
+          float[] hsb = new float[3];
+          try {
+              net.minecraft.client.renderer.texture.SpriteContents contents = sprite.contents();
+              for (int x = 0; x < contents.width(); x++) {
+                  for (int y = 0; y < contents.height(); y++) {
+                      int argb = sprite.getPixelRGBA(0, x, y);
+                      int ca = argb >> 24 & 0xFF;
+                      if (ca > 0x7F) {
+                          int cr = argb & 0xFF;
+                          int cg = (argb >> 8) & 0xFF;
+                          int cb = (argb >> 16) & 0xFF;
+                          if (Math.max(cr, Math.max(cg, cb)) > 0x1F) {
+                              java.awt.Color.RGBtoHSB(cr, cg, cb, hsb);
+                              float weight = hsb[1] + 0.1f;
+                              r += cr * weight;
+                              g += cg * weight;
+                              b += cb * weight;
+                              count += weight;
+                          }
+                      }
+                  }
+              }
+          } catch (Exception e) { return -1; }
+          if (count == 0) return -1;
+          r /= count;
+          g /= count;
+          b /= count;
+          java.awt.Color.RGBtoHSB((int)r, (int)g, (int)b, hsb);
+          hsb[1] = Math.min(1.0f, hsb[1] * 1.25f);
+          hsb[2] = Math.min(1.0f, hsb[2] * 1.25f);
+          return java.awt.Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]);
+      });
+  }
+
+  @SubscribeEvent
+  static void itemColors(final RegisterColorHandlersEvent.Item event) {
+    for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+      if (item instanceof BucketItem bucket) {
+        if (bucket.content.getFluidType() instanceof slimeknights.mantle.fluid.TextureFluidType) {
+          event.register((stack, index) -> {
+            if (index == 1) {
+              return getFluidColor(bucket.content);
+            }
+            return -1;
+          }, bucket);
+        }
+      }
+    }
+  }
+
   // sprite constants for offhand attack indicator (matching vanilla Gui sprites)
   private static final ResourceLocation CROSSHAIR_ATTACK_INDICATOR_BACKGROUND_SPRITE = ResourceLocation.withDefaultNamespace("hud/crosshair_attack_indicator_background");
   private static final ResourceLocation CROSSHAIR_ATTACK_INDICATOR_PROGRESS_SPRITE = ResourceLocation.withDefaultNamespace("hud/crosshair_attack_indicator_progress");

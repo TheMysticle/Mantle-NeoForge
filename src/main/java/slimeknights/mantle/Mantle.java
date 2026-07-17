@@ -99,7 +99,7 @@ public class Mantle {
   public static final String modId = "mantle";
   public static final Logger logger = LogManager.getLogger("Mantle");
   /** Namespace for common tags, used for easier migration to the future "c" standard */
-  public static final String COMMON = "forge";
+  public static final String COMMON = "c";
 
   // Condition codec registration
   private static final DeferredRegister<MapCodec<? extends ICondition>> CONDITION_CODECS =

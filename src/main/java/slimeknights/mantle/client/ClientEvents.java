@@ -79,7 +79,20 @@ public class ClientEvents {
   private static final java.util.concurrent.ConcurrentHashMap<net.minecraft.resources.ResourceLocation, Integer> COLOR_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
   private static int getFluidColor(net.minecraft.world.level.material.Fluid fluid) {
-      net.minecraft.resources.ResourceLocation still = IClientFluidTypeExtensions.of(fluid).getStillTexture();
+      IClientFluidTypeExtensions clientExt = IClientFluidTypeExtensions.of(fluid);
+      int tint = clientExt.getTintColor();
+      if (tint != -1 && tint != 0xFFFFFFFF) {
+          float[] hsb = new float[3];
+          int cr = (tint >> 16) & 0xFF;
+          int cg = (tint >> 8) & 0xFF;
+          int cb = tint & 0xFF;
+          java.awt.Color.RGBtoHSB(cr, cg, cb, hsb);
+          hsb[1] = Math.min(1.0f, hsb[1] * 1.25f);
+          hsb[2] = Math.min(1.0f, hsb[2] * 1.25f);
+          return java.awt.Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]);
+      }
+
+      net.minecraft.resources.ResourceLocation still = clientExt.getStillTexture();
       if (still == null) return -1;
       return COLOR_CACHE.computeIfAbsent(still, s -> {
           net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = net.minecraft.client.Minecraft.getInstance().getModelManager().getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).getSprite(s);

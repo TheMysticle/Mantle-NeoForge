@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** Represents an opening and closing Html tag containing some contents. */
 public class HtmlElement extends HtmlGroup {
@@ -23,7 +24,9 @@ public class HtmlElement extends HtmlGroup {
   private final Map<String,String> attributes = new LinkedHashMap<>();
   /** Map of style attributes to add to the element. */
   private final Map<String,String> style = new LinkedHashMap<>();
-  /** Cache of whether this is a self closing tag */
+  /** Html for the tooltip element. */
+  private HtmlSerializable minetip = null;
+  /** Cache of whether this is a self-closing tag */
   private final boolean selfClosing;
 
   private HtmlElement(String tag, boolean indentChildren) {
@@ -43,11 +46,30 @@ public class HtmlElement extends HtmlGroup {
   }
 
   @Override
-  public HtmlGroup add(HtmlSerializable element) {
+  public HtmlElement add(HtmlSerializable element) {
     if (selfClosing) {
       throw new IllegalStateException("Cannot add children to self-closing elements");
     }
-    return super.add(element);
+    super.add(element);
+    return this;
+  }
+
+  @Override
+  public HtmlElement add(HtmlSerializable... elements) {
+    super.add(elements);
+    return this;
+  }
+
+  @Override
+  public HtmlElement add(Stream<? extends HtmlSerializable> elements) {
+    super.add(elements);
+    return this;
+  }
+
+  @Override
+  public HtmlElement add(String text) {
+    super.add(text);
+    return this;
   }
 
 
@@ -77,9 +99,30 @@ public class HtmlElement extends HtmlGroup {
     return attribute("id", id);
   }
 
+  /** Sets the element tooltip using the minecraft style to the given HTML. */
+  public HtmlElement minetip(HtmlSerializable contents) {
+    minetip = contents;
+    return this;
+  }
+
   /** Sets the element tooltip using the minecraft style. */
   public HtmlElement minetip(String text) {
-    return attribute("data-minetip-title", text);
+    return minetip(new HtmlString(text));
+  }
+
+  /** Sets the link target */
+  public HtmlElement href(String target) {
+    return attribute("href", target);
+  }
+
+  /** Sets the image location */
+  public HtmlElement src(String target) {
+    return attribute("src", target);
+  }
+
+  /** Sets the alt text on an image */
+  public HtmlElement alt(String text) {
+    return attribute("alt", text);
   }
 
 
@@ -103,7 +146,7 @@ public class HtmlElement extends HtmlGroup {
 
   /** Adds a color element to the style */
   public HtmlElement color(String name, int color) {
-    return style("color", '#' + ColorLoadable.NO_ALPHA.getString(color));
+    return style(name, '#' + ColorLoadable.NO_ALPHA.getString(color));
   }
 
   /** Adds the color element to the style */
@@ -162,6 +205,16 @@ public class HtmlElement extends HtmlGroup {
       builder.append('"');
     }
 
+    // add minetip, which may be HTML
+    if (minetip != null) {
+      // append the minetip in a single quote string, so we just have to escape single quotes
+      StringBuilder minetipBuilder = new StringBuilder();
+      this.minetip.toHtml(minetipBuilder, indent + "  ");
+      builder.append(" data-minetip-title='")
+        .append(minetipBuilder.toString().replaceAll("'", "&quot;"))
+        .append('\'');
+    }
+
     // for self-closing tags, use HTML5 style
     if (selfClosing) {
       builder.append("/>");
@@ -172,7 +225,7 @@ public class HtmlElement extends HtmlGroup {
       // close opening tag
       builder.append('>');
       if (indentChildren) {
-        builder.append('\n');
+        builder.append('\n').append(indent).append("  ");
       }
 
       // add all nested elements, indent if requested
@@ -180,7 +233,7 @@ public class HtmlElement extends HtmlGroup {
 
       // close tag
       if (indentChildren) {
-        builder.append(indent);
+        builder.append('\n').append(indent);
       }
       builder.append("</").append(tag).append('>');
     }
@@ -221,6 +274,11 @@ public class HtmlElement extends HtmlGroup {
     return inline("p");
   }
 
+  /** Creates a new link element */
+  public static HtmlElement a() {
+    return inline("a");
+  }
+
   /** Creates a span element */
   public static HtmlElement span() {
     return inline("span");
@@ -234,6 +292,11 @@ public class HtmlElement extends HtmlGroup {
   /** Creates an italic element */
   public static HtmlElement i() {
     return inline("i");
+  }
+
+  /** Creates an italic element */
+  public static HtmlElement img() {
+    return inline("img").alt("");
   }
 
   /** Creates a line break element. Different return type ensures no children or attributes are added by accident. */

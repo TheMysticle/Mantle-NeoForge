@@ -144,8 +144,13 @@ public class CombatHelper {
     return attribute.value().sanitizeValue(value);
   }
 
+  /** Checks if the given entity can be attacked. */
+  public static boolean isAttackable(Entity attacker, Entity target) {
+    return target.isAttackable() && !target.skipAttackInteraction(attacker);
+  }
+
   /**
-   * Performs an attack, mimicing  {@link Player#attack(Entity)}.
+   * Performs an attack, mimicking  {@link Player#attack(Entity)}.
    * For use in {@link net.minecraft.world.item.Item#interactLivingEntity(ItemStack, Player, LivingEntity, InteractionHand)} primarily,
    * but can also be used to fake an attack similar to {@link net.neoforged.neoforge.common.extensions.IItemExtension#onLeftClickEntity(ItemStack, Player, Entity)}.
    *
@@ -155,7 +160,22 @@ public class CombatHelper {
    * @param hand          Hand used for attacking.
    */
   public static boolean attack(ItemStack stack, Player player, Entity target, @Nullable LivingEntity targetLiving, InteractionHand hand) {
-    if (target.isAttackable() && !target.skipAttackInteraction(player)) {
+    return attack(stack, player, target, targetLiving, hand, player.damageSources().playerAttack(player));
+  }
+
+  /**
+   * Performs an attack, mimicking {@link Player#attack(Entity)} but allowing the damage source to be swapped.
+   * For use in {@link net.minecraft.world.item.Item#interactLivingEntity(ItemStack, Player, LivingEntity, InteractionHand)} primarily,
+   * but can also be used to fake an attack similar to {@link net.minecraftforge.common.extensions.IForgeItem#onLeftClickEntity(ItemStack, Player, Entity)}.
+   *
+   * @param stack         Stack used for attacking.
+   * @param target        Entity target
+   * @param targetLiving  Living entity target. May be different in the case of multipart entities.
+   * @param hand          Hand used for attacking.
+   * @param damageSource  Damage source to apply
+   */
+  public static boolean attack(ItemStack stack, Player player, Entity target, @Nullable LivingEntity targetLiving, InteractionHand hand, DamageSource damageSource) {
+    if (isAttackable(player, target)) {
       // find damage to deal
       float damage;
       if (hand == InteractionHand.OFF_HAND) {
@@ -163,9 +183,6 @@ public class CombatHelper {
       } else {
         damage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
       }
-
-      // create damage source early for enchantment calculations
-      DamageSource damageSource = player.damageSources().playerAttack(player);
 
       // find enchantment damage bonus via the new data-driven system
       float enchantmentDamage = 0;

@@ -8,11 +8,14 @@ import net.minecraft.server.packs.resources.Resource;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.common.conditions.TrueCondition;
 import slimeknights.mantle.client.book.BookLoader;
+import slimeknights.mantle.client.book.IHTML;
 import slimeknights.mantle.client.book.data.content.ContentError;
 import slimeknights.mantle.client.book.data.element.ImageData;
 import slimeknights.mantle.client.book.repository.BookRepository;
 import slimeknights.mantle.client.screen.book.BookScreen;
 import slimeknights.mantle.util.DataLoadedConditionContext;
+import slimeknights.mantle.util.html.HtmlElement;
+import slimeknights.mantle.util.html.HtmlSerializable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -23,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SectionData implements IDataItem, IConditional {
+public class SectionData implements IDataItem, IConditional, IHTML {
 
   public String name = null;
   public ImageData icon = new ImageData();
@@ -143,5 +146,21 @@ public class SectionData implements IDataItem, IConditional {
   @Override
   public boolean isConditionMet() {
     return condition.test(DataLoadedConditionContext.INSTANCE);
+  }
+
+  @Override
+  public HtmlSerializable toHTML(BookData book) {
+    int pageNumber = book.getFirstPageNumber(this, null);
+    // first page number is 1 indexed, but find page is 0 indexed
+    PageData firstPage = book.findPage(pageNumber - 1, null);
+    if (firstPage == null) {
+      return HtmlSerializable.EMPTY;
+    }
+    String title = getTitle();
+    return HtmlElement.div()
+      .minetip(title)
+      .add(HtmlElement.a().href("../page-" + (pageNumber / 2) + "/#" + name + '.' + firstPage.name)
+        .add(HtmlElement.img().src("/assets/images/book/icons/blank.png"))) // TODO: make this not an image
+      .add(HtmlElement.p().add(title));
   }
 }

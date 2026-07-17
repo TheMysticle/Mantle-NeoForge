@@ -3,15 +3,20 @@ package slimeknights.mantle.client.screen.book.element;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import slimeknights.mantle.client.book.IHTML;
 import slimeknights.mantle.client.book.action.StringActionProcessor;
+import slimeknights.mantle.client.book.data.BookData;
 import slimeknights.mantle.client.book.data.element.TextComponentData;
 import slimeknights.mantle.client.screen.book.TextComponentDataRenderer;
+import slimeknights.mantle.util.html.HtmlGroup;
+import slimeknights.mantle.util.html.HtmlSerializable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-public class TextComponentElement extends SizedBookElement {
+public class TextComponentElement extends SizedBookElement implements IHTML {
 
   public TextComponentData[] text;
   private final List<Component> tooltip = new ArrayList<>();
@@ -54,5 +59,15 @@ public class TextComponentElement extends SizedBookElement {
     if (mouseButton == 0 && !lastAction.isEmpty()) {
       StringActionProcessor.process(lastAction, this.parent);
     }
+  }
+
+  @Override
+  public HtmlSerializable toHTML(BookData book) {
+    return HtmlGroup.indent().add(Arrays.stream(text).map(s -> s.toHTML(book)));
+  }
+
+  @Override
+  public boolean isText() {
+    return true;
   }
 }

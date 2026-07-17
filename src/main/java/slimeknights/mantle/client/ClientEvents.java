@@ -180,6 +180,7 @@ public class ClientEvents {
         if (!isHotbar && minecraft.options.getCameraType().isFirstPerson()) {
           if (!minecraft.gui.getDebugOverlay().showDebugScreen() || settings.hideGui || minecraft.player.isReducedDebugInfo() || settings.reducedDebugInfo().get()) {
             // mostly cloned from vanilla attack indicator
+            RenderSystem.enableBlend();
             RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR, GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
             int scaledHeight = minecraft.getWindow().getGuiScaledHeight();
             // integer division makes this a pain to line up, there might be a simplier version of this formula but I cannot think of one
@@ -188,6 +189,7 @@ public class ClientEvents {
             int width = (int)(cooldown * 17.0F);
             graphics.blitSprite(CROSSHAIR_ATTACK_INDICATOR_BACKGROUND_SPRITE, x, y, 16, 4);
             graphics.blitSprite(CROSSHAIR_ATTACK_INDICATOR_PROGRESS_SPRITE, 16, 4, 0, 0, x, y, width, 4);
+            RenderSystem.defaultBlendFunc();
           }
         }
         break;
